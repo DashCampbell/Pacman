@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build & run C++ project",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-std=c++17",
+                "${file}",
+                "-o",
+                "${fileDirname}\\${fileBasenameNoExtension}",
+                "-luser32",
+                "-lgdi32",
+                "-lopengl32",
+                "-lgdiplus",
+                "-lShlwapi",
+                "-ldwmapi",
+                "-lstdc++fs",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

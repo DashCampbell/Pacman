@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.tpp": "cpp",
+        "cmath": "cpp",
+        "iostream": "cpp",
+        "strstream": "cpp",
+        "vector": "cpp",
+        "filesystem": "cpp"
+    },
+    "terminal.integrated.shell.windows": "C:\\Program Files\\Git\\bin\\bash.exe"
+}
