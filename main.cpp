@@ -17,8 +17,14 @@ struct sNode
 {
 	int x, y;
 	std::vector<sNode *> neighbours;
-	std::vector<sNode> pathNeighbours;
+	sNode *parent;
 	nodeType type;
+	int gCost, hCost;
+
+	int fCost()
+	{
+		return gCost + hCost;
+	}
 };
 struct PacMan
 {
@@ -38,10 +44,11 @@ private:
 	// Number of Tiles accros a map
 	const static int mapWidth = 16;
 	const static int mapHeight = 16;
-	// Size of a Map Tile
+	// Screen Size of a Map Tile
 	const static int cellWidth = (screenWidth) / (mapWidth - 2);
 	const static int cellHeight = (screenHeight) / (mapHeight - 2);
 
+	// Screen Size of Player Radius
 	static constexpr float playerRadius = (cellWidth - 6) / 2;
 
 	int nPoints, nTotalPoints;
@@ -49,6 +56,64 @@ private:
 	PacMan player;
 
 public:
+	// Pathfinding Algorithm
+	void pathFindingAStar(sNode nStart, sNode nEnd)
+	{
+		std::vector<sNode> openSet;
+		std::vector<sNode> closedSet;
+
+		openSet.push_back(nStart);
+
+		while (openSet.size() > 0)
+		{
+			sNode *currentNode = &openSet[0];
+
+			// Get current node with the lowest f cost
+			int index = 0;
+			for (int i = 1; i < openSet.size(); i++)
+			{
+				if (openSet[i].fCost() < currentNode->fCost() ||
+					(openSet[i].fCost() == currentNode->fCost() && openSet[i].hCost < currentNode->hCost))
+				{
+					currentNode = &openSet[i];
+					index = i;
+				}
+			}
+			openSet.erase(openSet.cbegin() + index);
+			closedSet.push_back(*currentNode);
+
+			// If the current node equals the End Node, then path is found
+			if (currentNode->x == nEnd.x && currentNode->y == nEnd.y)
+			{
+				return;
+			}
+
+			// Loop through node neighbours
+			auto searchList = [](std::vector<sNode> &list, sNode &node)
+			{
+				for (auto &n : list)
+				{
+					if (n.x == node.x && n.y == node.y)
+						return true;
+				}
+				return false;
+			};
+			// Get Distance between nodes
+			auto getDistance = [](sNode &s, sNode &e)
+			{
+				return std::abs(s.x - e.x) + std::abs(s.y - e.y);
+			};
+
+			for (auto node : currentNode->neighbours)
+			{
+				if (searchList(closedSet, *node))
+					continue;
+
+				int newMovementCostToNeighbour = currentNode->gCost + getDistance(*currentNode, *node);
+			}
+		}
+	}
+
 	bool OnUserCreate() override
 	{
 		// Called once at the start, so create things here
@@ -93,6 +158,21 @@ public:
 				}
 			}
 		}
+		// Add Node Neighbours
+		for (int row = 1; row < mapHeight - 1; row++)
+		{
+			for (int col = 1; col < mapWidth - 1; col++)
+			{
+				for (int i = -1; i < 2; i += 2)
+				{
+					if (nodeMap[row + i][col].type == PATH_FULL)
+						nodeMap[row][col].neighbours.push_back(&nodeMap[row + i][col]);
+					if (nodeMap[row][col + i].type == PATH_FULL)
+						nodeMap[row][col].neighbours.push_back(&nodeMap[row][col + i]);
+				}
+			}
+		}
+
 		// Inialize Player Position
 		player.x = 8.5f;
 		player.y = 8.5f;
@@ -144,7 +224,7 @@ public:
 		{
 			for (int col = 0; col < mapWidth; col++)
 			{
-				// coordinates of top left corner of a cell
+				// screen coordinates of top left corner of a cell
 				int cellX = col * cellWidth - cellWidth;
 				int cellY = row * cellHeight - cellHeight;
 				switch (nodeMap[row][col].type)
