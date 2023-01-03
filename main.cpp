@@ -19,11 +19,20 @@ struct sNode
 	std::vector<sNode *> neighbours;
 	sNode *parent;
 	nodeType type;
-	int gCost, hCost;
 
-	int fCost()
+	// Distance from starting node
+	int gCost;
+	// Distance to end node
+	int hCost;
+
+	int fCost() const
 	{
 		return gCost + hCost;
+	}
+
+	inline bool operator==(const sNode &rhs)
+	{
+		return this->x == rhs.x && this->y == rhs.y;
 	}
 };
 struct PacMan
@@ -55,61 +64,85 @@ private:
 	sNode nodeMap[mapHeight][mapWidth];
 	PacMan player;
 
+	// test path
+	std::list<sNode> path;
+
 public:
 	// Pathfinding Algorithm
 	void pathFindingAStar(sNode nStart, sNode nEnd)
 	{
-		std::vector<sNode> openSet;
-		std::vector<sNode> closedSet;
-
-		openSet.push_back(nStart);
-
-		while (openSet.size() > 0)
+		auto searchList = [](std::list<sNode *> &list, sNode *node)
 		{
-			sNode *currentNode = &openSet[0];
-
-			// Get current node with the lowest f cost
-			int index = 0;
-			for (int i = 1; i < openSet.size(); i++)
+			for (auto &n : list)
 			{
-				if (openSet[i].fCost() < currentNode->fCost() ||
-					(openSet[i].fCost() == currentNode->fCost() && openSet[i].hCost < currentNode->hCost))
-				{
-					currentNode = &openSet[i];
-					index = i;
-				}
+				if (n == node)
+					return true;
 			}
-			openSet.erase(openSet.cbegin() + index);
-			closedSet.push_back(*currentNode);
+			return false;
+		};
+		// Get Distance between nodes
+		auto getDistance = [](sNode &s, sNode &e)
+		{
+			return std::abs(s.x - e.x) + std::abs(s.y - e.y);
+		};
+		// Reset Map Values
+
+		std::list<sNode *> openSet;
+		std::list<sNode *> closedSet;
+		sNode *currentNode;
+
+		openSet.push_back(&nStart);
+
+		// Prevent Infinite Loop
+		const int maxIterations = mapHeight * mapWidth;
+		int iteration = 0;
+		while (!openSet.empty())
+		{
+			iteration++;
+			if (iteration > maxIterations)
+			{
+				return;
+			}
+			// Get current node with the lowest f cost
+			openSet.sort([](const sNode *lhs, const sNode *rhs)
+						 { return (lhs->fCost() < rhs->fCost()) || (lhs->fCost() == rhs->fCost() && lhs->hCost < rhs->hCost); });
+			currentNode = openSet.front();
+			closedSet.push_back(openSet.front());
+			openSet.pop_front();
 
 			// If the current node equals the End Node, then path is found
-			if (currentNode->x == nEnd.x && currentNode->y == nEnd.y)
+			if (*currentNode == nEnd)
 			{
+				std::list<sNode> node_path;
+				sNode cNode = *currentNode;
+
+				while (!(cNode == nStart))
+				{
+					node_path.push_back(cNode);
+					cNode = *cNode.parent;
+				}
+				node_path.reverse();
+				path = node_path;
+				std::cout << "Path Found" << std::endl;
 				return;
 			}
 
 			// Loop through node neighbours
-			auto searchList = [](std::vector<sNode> &list, sNode &node)
+			for (auto &neighbour : currentNode->neighbours)
 			{
-				for (auto &n : list)
-				{
-					if (n.x == node.x && n.y == node.y)
-						return true;
-				}
-				return false;
-			};
-			// Get Distance between nodes
-			auto getDistance = [](sNode &s, sNode &e)
-			{
-				return std::abs(s.x - e.x) + std::abs(s.y - e.y);
-			};
-
-			for (auto node : currentNode->neighbours)
-			{
-				if (searchList(closedSet, *node))
+				if (searchList(closedSet, neighbour))
 					continue;
 
-				int newMovementCostToNeighbour = currentNode->gCost + getDistance(*currentNode, *node);
+				int newMovementCostToNeighbour = currentNode->gCost + 1;
+				if (newMovementCostToNeighbour < neighbour->gCost || !searchList(openSet, neighbour))
+				{
+					neighbour->gCost = newMovementCostToNeighbour;
+					neighbour->hCost = getDistance(*neighbour, nEnd);
+					neighbour->parent = currentNode;
+
+					if (!searchList(openSet, neighbour))
+						openSet.push_back(neighbour);
+				}
 			}
 		}
 	}
@@ -172,6 +205,7 @@ public:
 				}
 			}
 		}
+		std::cout << nodeMap[2][8].gCost << std::endl;
 
 		// Inialize Player Position
 		player.x = 8.5f;
@@ -217,8 +251,19 @@ public:
 			nPoints++;
 		}
 
+		// Update Path Finding
+		sNode p;
+		p.x = (int)player.x;
+		p.y = (int)player.y;
+		sNode nEnd;
+		nEnd.x = 10;
+		nEnd.y = 14;
+
 		// Render
 		Clear(olc::BLACK);
+		pathFindingAStar(p, nEnd);
+		DrawString(10, 30, std::to_string(path.size())), olc::WHITE;
+
 		// Render Map
 		for (int row = 0; row < mapHeight; row++)
 		{
@@ -252,6 +297,7 @@ public:
 
 		// Render Player
 		FillCircle(player.x * cellWidth - cellWidth, player.y * cellHeight - cellHeight, playerRadius, olc::YELLOW);
+		FillCircle(nEnd.x * cellWidth - cellWidth, nEnd.y * cellHeight - cellHeight, playerRadius, olc::CYAN);
 
 		// Display Player Coins
 		DrawString(10, 10, "Coins: " + std::to_string(nPoints) + "/" + std::to_string(nTotalPoints));
