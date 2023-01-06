@@ -142,6 +142,7 @@ public:
 					path.push_back(cNode);
 					cNode = cNode->parent;
 				}
+				path.push_back(&nStart);
 				// path.reverse();
 				return true;
 			}
@@ -277,8 +278,8 @@ public:
 			nPoints++;
 		}
 
-		float ghostVelocity = 2.0f;
 		// Update Ghosts
+		float ghostVelocity = 2.0f;
 		for (auto &ghost : ghosts)
 		{
 			// Update Path Finding
@@ -346,6 +347,8 @@ public:
 
 		// Render Player
 		FillCircle(player.x * cellWidth - cellWidth, player.y * cellHeight - cellHeight, playerRadius, olc::YELLOW);
+		// Display Player's Node Location
+		// FillCircle((int)player.x * cellWidth - cellWidth / 2, (int)player.y * cellHeight - cellHeight / 2, playerRadius * 0.2, olc::CYAN);
 
 		// Display Player Coins
 		DrawString(10, 10, "Coins: " + std::to_string(nPoints) + "/" + std::to_string(nTotalPoints));

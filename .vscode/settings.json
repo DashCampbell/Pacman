@@ -5,7 +5,11 @@
         "iostream": "cpp",
         "strstream": "cpp",
         "vector": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "array": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string_view": "cpp"
     },
     "terminal.integrated.shell.windows": "C:\\Program Files\\Git\\bin\\bash.exe"
 }
