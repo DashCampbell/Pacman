@@ -40,11 +40,14 @@ struct PacMan
 	float x, y;
 	bool bAlive;
 };
-struct Enemy
+struct Ghost
 {
 	float x, y;
 	olc::Pixel color;
+
 	std::list<sNode *> path;
+
+	Ghost(float x, float y, olc::Pixel color) : x(x), y(y), color(color) {}
 };
 
 class Game : public olc::PixelGameEngine
@@ -69,14 +72,17 @@ private:
 	int nPoints, nTotalPoints;
 	sNode nodeMap[mapHeight][mapWidth];
 	PacMan player;
-
-	// test path
-	std::list<sNode *> path;
+	// Ghosts
+	std::list<Ghost> ghosts;
 
 public:
 	// Pathfinding Algorithm
-	void pathFindingAStar(sNode &nStart, sNode &nEnd)
+	bool pathFindingAStar(sNode &nStart, sNode &nEnd, std::list<sNode *> &path)
 	{
+		if (nStart == nEnd)
+			return false;
+		path.clear();
+
 		auto listContains = [](std::list<sNode *> &list, sNode *node)
 		{
 			for (auto &n : list)
@@ -118,7 +124,7 @@ public:
 			iteration++;
 			if (iteration > maxIterations)
 			{
-				return;
+				return false;
 			}
 			// Get current node with the lowest f cost
 			openSet.sort([](const sNode *lhs, const sNode *rhs)
@@ -131,14 +137,13 @@ public:
 			if (*currentNode == nEnd)
 			{
 				sNode *cNode = currentNode;
-				path.clear();
 				while (!(*cNode == nStart))
 				{
 					path.push_back(cNode);
 					cNode = cNode->parent;
 				}
-				path.reverse();
-				return;
+				// path.reverse();
+				return true;
 			}
 
 			// Loop through node neighbours
@@ -228,6 +233,10 @@ public:
 		player.x = 8.5f;
 		player.y = 8.5f;
 
+		// Create Ghosts
+		ghosts.push_back(Ghost(1, 1, olc::BLUE));
+		ghosts.push_back(Ghost(14, 12, olc::RED));
+
 		return true;
 	}
 
@@ -268,13 +277,23 @@ public:
 			nPoints++;
 		}
 
-		// Update Path Finding
-		sNode endNode = nodeMap[13][9];
-		pathFindingAStar(nodeMap[(int)player.y][(int)player.x], endNode);
+		float ghostVelocity = 2.0f;
+		// Update Ghosts
+		for (auto &ghost : ghosts)
+		{
+			// Update Path Finding
+			if (pathFindingAStar(nodeMap[(int)player.y][(int)player.x], nodeMap[(int)(ghost.y + 0.5)][(int)(ghost.x + 0.5)], ghost.path))
+			{
+				// The first element of the path is the ghost's position, second element is the future node
+				ghost.path.pop_front();
+				sNode *nextNode = ghost.path.front();
+				ghost.x += ghostVelocity * (nextNode->x - ghost.x) * fElapsedTime;
+				ghost.y += ghostVelocity * (nextNode->y - ghost.y) * fElapsedTime;
+			}
+		}
 
 		// Render
 		Clear(olc::BLACK);
-		DrawString(10, 30, std::to_string(path.size())), olc::WHITE;
 
 		// Render Map
 		for (int row = 0; row < mapHeight; row++)
@@ -307,15 +326,25 @@ public:
 			}
 		}
 
-		// Render Paths
-		for (auto &node : path)
+		// Render Ghosts
+		for (auto &ghost : ghosts)
 		{
-			FillCircle(node->x * cellWidth - cellWidth / 2, node->y * cellHeight - cellHeight / 2, 0.2 * cellWidth, olc::CYAN);
+			FillRect(ghost.x * cellWidth - cellWidth + cellWidth * 0.2, ghost.y * cellHeight - cellHeight / 2, cellWidth * 0.8, cellHeight, ghost.color);
+
+			if (!ghost.path.empty())
+			{
+				// Render Ghost Path
+				for (auto &node : ghost.path)
+				{
+					FillCircle(node->x * cellWidth - cellWidth / 2, node->y * cellHeight - cellHeight / 2, 0.2 * cellWidth, ghost.color);
+				}
+				// First Path Note
+				FillCircle(ghost.path.front()->x * cellWidth - cellWidth / 2, ghost.path.front()->y * cellHeight - cellHeight / 2, 0.2 * cellWidth, olc::GREEN);
+			}
 		}
 
 		// Render Player
 		FillCircle(player.x * cellWidth - cellWidth, player.y * cellHeight - cellHeight, playerRadius, olc::YELLOW);
-		FillCircle(endNode.x * cellWidth - cellWidth / 2, endNode.y * cellHeight - cellHeight / 2, playerRadius, olc::CYAN);
 
 		// Display Player Coins
 		DrawString(10, 10, "Coins: " + std::to_string(nPoints) + "/" + std::to_string(nTotalPoints));
