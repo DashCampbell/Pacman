@@ -40,6 +40,12 @@ struct PacMan
 	float x, y;
 	bool bAlive;
 };
+struct Enemy
+{
+	float x, y;
+	olc::Pixel color;
+	std::list<sNode *> path;
+};
 
 class Game : public olc::PixelGameEngine
 {
@@ -71,7 +77,7 @@ public:
 	// Pathfinding Algorithm
 	void pathFindingAStar(sNode &nStart, sNode &nEnd)
 	{
-		auto searchList = [](std::list<sNode *> &list, sNode *node)
+		auto listContains = [](std::list<sNode *> &list, sNode *node)
 		{
 			for (auto &n : list)
 			{
@@ -83,15 +89,16 @@ public:
 		// Get Distance between nodes
 		auto getDistance = [](sNode &s, sNode &e)
 		{
-			return (int)sqrt((s.x - e.x) * (s.x - e.x) + (s.y - e.y) * (s.y - e.y));
+			// return (int)sqrt((s .x - e.x) * (s.x - e.x) + (s.y - e.y) * (s.y - e.y));
+			return (s.x - e.x) * (s.x - e.x) + (s.y - e.y) * (s.y - e.y);
 		};
 		// Reset Map Values
 		for (int row = 0; row < mapHeight; row++)
 		{
 			for (int col = 0; col < mapWidth; col++)
 			{
-				nodeMap[row][col].gCost = INFINITE;
-				nodeMap[row][col].hCost = INFINITE;
+				nodeMap[row][col].gCost = (int)INFINITY;
+				nodeMap[row][col].hCost = (int)INFINITY;
 			}
 		}
 
@@ -117,50 +124,40 @@ public:
 			openSet.sort([](const sNode *lhs, const sNode *rhs)
 						 { return (lhs->fCost() < rhs->fCost()) || (lhs->fCost() == rhs->fCost() && lhs->hCost < rhs->hCost); });
 			currentNode = openSet.front();
-			std::cout << currentNode->x << std::endl;
-			std::cout << currentNode->y << std::endl;
-			for (auto &n : openSet)
-			{
-				std::cout << n->fCost() << ", ";
-			}
-			std::cout << "" << std::endl;
-			system("pause");
-
 			closedSet.push_back(openSet.front());
 			openSet.pop_front();
 
 			// If the current node equals the End Node, then path is found
 			if (*currentNode == nEnd)
 			{
-				std::list<sNode *> node_path;
 				sNode *cNode = currentNode;
-
-				while (!(*cNode == nStart) && searchList(node_path, &nStart))
+				path.clear();
+				while (!(*cNode == nStart))
 				{
-					node_path.push_back(cNode);
+					path.push_back(cNode);
 					cNode = cNode->parent;
 				}
-				node_path.reverse();
-				path = node_path;
-				std::cout << "Path Found" << std::endl;
+				path.reverse();
 				return;
 			}
 
 			// Loop through node neighbours
 			for (auto &neighbour : currentNode->neighbours)
 			{
-				if (searchList(closedSet, neighbour))
+				if (listContains(closedSet, neighbour))
 					continue;
 
 				int newMovementCostToNeighbour = currentNode->gCost + getDistance(*currentNode, *neighbour);
-				if (newMovementCostToNeighbour < neighbour->gCost || !searchList(openSet, neighbour))
+				if (newMovementCostToNeighbour < neighbour->gCost)
 				{
 					neighbour->gCost = newMovementCostToNeighbour;
 					neighbour->hCost = getDistance(*neighbour, nEnd);
 					neighbour->parent = currentNode;
 
-					if (!searchList(openSet, neighbour))
+					if (!listContains(openSet, neighbour))
+					{
 						openSet.push_back(neighbour);
+					}
 				}
 			}
 		}
@@ -272,7 +269,8 @@ public:
 		}
 
 		// Update Path Finding
-		pathFindingAStar(nodeMap[(int)player.y][(int)player.x], nodeMap[14][8]);
+		sNode endNode = nodeMap[13][9];
+		pathFindingAStar(nodeMap[(int)player.y][(int)player.x], endNode);
 
 		// Render
 		Clear(olc::BLACK);
@@ -309,9 +307,15 @@ public:
 			}
 		}
 
+		// Render Paths
+		for (auto &node : path)
+		{
+			FillCircle(node->x * cellWidth - cellWidth / 2, node->y * cellHeight - cellHeight / 2, 0.2 * cellWidth, olc::CYAN);
+		}
+
 		// Render Player
 		FillCircle(player.x * cellWidth - cellWidth, player.y * cellHeight - cellHeight, playerRadius, olc::YELLOW);
-		FillCircle(14 * cellWidth - cellWidth, 8 * cellHeight - cellHeight, playerRadius, olc::CYAN);
+		FillCircle(endNode.x * cellWidth - cellWidth / 2, endNode.y * cellHeight - cellHeight / 2, playerRadius, olc::CYAN);
 
 		// Display Player Coins
 		DrawString(10, 10, "Coins: " + std::to_string(nPoints) + "/" + std::to_string(nTotalPoints));
