@@ -234,7 +234,7 @@ public:
 		player.y = 8.5f;
 
 		// Create Ghosts
-		ghosts.push_back(Ghost(1, 1, olc::BLUE));
+		ghosts.push_back(Ghost(1, 1, olc::DARK_MAGENTA));
 		ghosts.push_back(Ghost(14, 12, olc::RED));
 
 		return true;
@@ -285,7 +285,8 @@ public:
 			if (pathFindingAStar(nodeMap[(int)player.y][(int)player.x], nodeMap[(int)(ghost.y + 0.5)][(int)(ghost.x + 0.5)], ghost.path))
 			{
 				// The first element of the path is the ghost's position, second element is the future node
-				ghost.path.pop_front();
+				if (ghost.path.size() != 1)
+					ghost.path.pop_front();
 				sNode *nextNode = ghost.path.front();
 				ghost.x += ghostVelocity * (nextNode->x - ghost.x) * fElapsedTime;
 				ghost.y += ghostVelocity * (nextNode->y - ghost.y) * fElapsedTime;
@@ -329,7 +330,7 @@ public:
 		// Render Ghosts
 		for (auto &ghost : ghosts)
 		{
-			FillRect(ghost.x * cellWidth - cellWidth + cellWidth * 0.2, ghost.y * cellHeight - cellHeight / 2, cellWidth * 0.8, cellHeight, ghost.color);
+			FillRect(ghost.x * cellWidth - cellWidth + cellWidth * 0.2, ghost.y * cellHeight - cellHeight, cellWidth * 0.8, cellHeight, ghost.color);
 
 			if (!ghost.path.empty())
 			{
