@@ -2,8 +2,8 @@
 #include "olcPixelGameEngine.h"
 #include <vector>
 
-const int screenWidth = 390;
-const int screenHeight = 390;
+const int screenWidth = 320;
+const int screenHeight = screenWidth;
 
 enum nodeType
 {
@@ -237,6 +237,7 @@ public:
 		// Create Ghosts
 		ghosts.push_back(Ghost(1, 1, olc::DARK_MAGENTA));
 		ghosts.push_back(Ghost(14, 12, olc::RED));
+		ghosts.push_back(Ghost(3, 14, olc::Pixel(200, 200, 80)));
 
 		return true;
 	}
